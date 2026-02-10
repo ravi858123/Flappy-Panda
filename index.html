@@ -1,0 +1,219 @@
+
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Flappy Panda 🐼</title>
+<style>
+* { box-sizing:border-box; }
+body { margin:0; font-family:Arial; background:#87CEEB; overflow:hidden; }
+canvas { display:block; }
+.screen {
+  position:fixed; inset:0;
+  display:flex; flex-direction:column;
+  justify-content:center; align-items:center;
+  background:rgba(0,0,0,0.65);
+  color:white; z-index:10;
+}
+button {
+  padding:12px 24px; margin:6px;
+  font-size:16px; border-radius:10px; border:none;
+}
+.card {
+  background:white; color:black;
+  padding:12px; border-radius:12px;
+  margin:6px; width:240px;
+}
+#hud { position:fixed; top:10px; left:10px; font-size:18px; }
+</style>
+</head>
+<body>
+
+<div id="menu" class="screen">
+  <h1>Flappy Panda 🐼</h1>
+  <p>Coins: <span id="coins">0</span></p>
+  <button onclick="startGame()">Start</button>
+  <button onclick="openShop()">Shop</button>
+</div>
+
+<div id="shop" class="screen" style="display:none">
+  <h2>Skins</h2>
+  <div id="shopList"></div>
+  <button onclick="backToMenu()">Terug</button>
+</div>
+
+<div id="gameover" class="screen" style="display:none">
+  <h2>Game Over</h2>
+  <p>Score: <span id="finalScore">0</span></p>
+  <button onclick="startGame()">Opnieuw</button>
+  <button onclick="backToMenu()">Menu</button>
+</div>
+
+<div id="hud">Score: <span id="score">0</span></div>
+<canvas id="game"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+function resize(){
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+window.addEventListener("resize", resize);
+resize();
+
+const SKINS = [
+  {emoji:"🐼", name:"Panda", cost:0},
+  {emoji:"🐵", name:"Monkey", cost:10},
+  {emoji:"🐸", name:"Frog", cost:15},
+  {emoji:"🐧", name:"Penguin", cost:20},
+  {emoji:"🐱", name:"Cat", cost:25},
+  {emoji:"🦊", name:"Fox", cost:30},
+  {emoji:"🐶", name:"Dog", cost:35},
+  {emoji:"🐯", name:"Tiger", cost:40}
+];
+
+let coins = Number(localStorage.getItem("coins")||0);
+let ownedSkins = JSON.parse(localStorage.getItem("ownedSkins")||"[]");
+if(!ownedSkins.includes("🐼")) ownedSkins.push("🐼");
+
+let currentSkin = localStorage.getItem("skin") || "🐼";
+
+document.getElementById("coins").textContent = coins;
+
+let state="menu", bird, pipes, score, gravity=0.6, pipeTimer=0;
+
+function startGame(){
+  hideAll();
+  state="game";
+  bird={x:canvas.width*0.25, y:canvas.height/2, v:0};
+  pipes=[];
+  score=0;
+  pipeTimer=0;
+  document.getElementById("score").textContent=0;
+}
+
+function openShop(){
+  hideAll();
+  state="shop";
+  shop.style.display="flex";
+  renderShop();
+}
+
+function backToMenu(){
+  hideAll();
+  state="menu";
+  menu.style.display="flex";
+}
+
+function gameOver(){
+  state="gameover";
+  coins+=score;
+  localStorage.setItem("coins",coins);
+  document.getElementById("coins").textContent=coins;
+  document.getElementById("finalScore").textContent=score;
+  gameover.style.display="flex";
+}
+
+function hideAll(){
+  menu.style.display="none";
+  shop.style.display="none";
+  gameover.style.display="none";
+}
+
+function renderShop(){
+  const list=document.getElementById("shopList");
+  list.innerHTML="";
+  SKINS.forEach(s=>{
+    const owned = ownedSkins.includes(s.emoji);
+    const card=document.createElement("div");
+    card.className="card";
+    card.innerHTML=`
+      <strong>${s.emoji} ${s.name}</strong><br>
+      ${owned ? "Owned" : s.cost+" coins"}<br>
+      <button>${owned ? "Equip" : "Koop"}</button>
+    `;
+    card.querySelector("button").onclick=()=>{
+      if(owned){
+        equipSkin(s.emoji);
+      } else {
+        buySkin(s);
+      }
+    };
+    list.appendChild(card);
+  });
+}
+
+function buySkin(s){
+  if(coins < s.cost){
+    alert("Niet genoeg coins");
+    return;
+  }
+  coins -= s.cost;
+  ownedSkins.push(s.emoji);
+  localStorage.setItem("coins",coins);
+  localStorage.setItem("ownedSkins",JSON.stringify(ownedSkins));
+  document.getElementById("coins").textContent=coins;
+  equipSkin(s.emoji);
+}
+
+function equipSkin(emoji){
+  currentSkin = emoji;
+  localStorage.setItem("skin",emoji);
+  alert("Skin equipped!");
+}
+
+function spawnPipe(){
+  const gap = canvas.height*0.3;
+  const top = Math.random()*(canvas.height-gap-100)+50;
+  pipes.push({x:canvas.width, top, bottom:top+gap, passed:false});
+}
+
+function update(){
+  if(state!=="game") return;
+  bird.v+=gravity;
+  bird.y+=bird.v;
+  if(bird.y<0||bird.y>canvas.height) gameOver();
+
+  pipeTimer++;
+  if(pipeTimer>90){ spawnPipe(); pipeTimer=0; }
+
+  pipes.forEach(p=>{
+    p.x-=4;
+    if(!p.passed && p.x<bird.x){
+      p.passed=true;
+      score++;
+      document.getElementById("score").textContent=score;
+    }
+    if(bird.x>p.x&&bird.x<p.x+60&&(bird.y<p.top||bird.y>p.bottom)){
+      gameOver();
+    }
+  });
+  pipes=pipes.filter(p=>p.x>-80);
+}
+
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(state!=="game") return;
+  ctx.font="32px serif";
+  ctx.fillText(currentSkin,bird.x-16,bird.y);
+  ctx.fillStyle="green";
+  pipes.forEach(p=>{
+    ctx.fillRect(p.x,0,60,p.top);
+    ctx.fillRect(p.x,p.bottom,60,canvas.height);
+  });
+}
+
+function loop(){ update(); draw(); requestAnimationFrame(loop); }
+loop();
+
+function flap(){ if(state==="game") bird.v=-10; }
+document.addEventListener("touchstart",e=>{if(state==="game"){e.preventDefault();flap();}},{passive:false});
+document.addEventListener("mousedown",flap);
+document.addEventListener("keydown",e=>{if(e.code==="Space")flap();});
+</script>
+
+</body>
+</html>
