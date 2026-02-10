@@ -28,7 +28,7 @@ button{padding:12px 24px;margin:6px;font-size:16px;border-radius:10px;border:non
 <button onclick="startGame()">Start</button>
 <button onclick="openShop()">Shop</button>
 <div id="leaderboard">
-<h3>🌍 Global Highscores</h3>
+<h3>Wereldwijde Highscores</h3>
 <ol id="scores"></ol>
 </div>
 </div>
@@ -56,7 +56,7 @@ window.addEventListener("resize",resize);resize();
 
 const SKINS=[
 {emoji:"🐼",cost:0},{emoji:"🐵",cost:10},{emoji:"🐸",cost:15},
-{emoji:"🐧",cost:20},{emoji:"🐱",cost:25},{emoji:"🦊",cost:30}
+{emoji:"🐧",cost:20},{emoji:"🐱",cost:25},{emoji:"🦊",cost:30},{emoji:"🐶",cost:40},{emoji:"🐦",cost:50},{emoji:"😹",cost:100}
 ];
 
 let coins=Number(localStorage.getItem("coins")||0);
