@@ -1,138 +1,151 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Flappy Panda 🐼</title>
 <style>
+*{box-sizing:border-box}
 body{margin:0;font-family:Arial;background:#87CEEB;overflow:hidden}
 canvas{display:block}
-button{padding:14px 22px;font-size:18px;margin:8px;border-radius:10px;border:none}
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center}
-#shop{display:none}
-#shopContent{background:#222;width:90%;max-height:70%;overflow-y:auto;border-radius:14px;padding:15px}
-.skin{font-size:34px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #444;padding:6px}
-#leaderboard{background:#222;padding:15px;border-radius:12px;margin-top:20px;width:80%;max-width:300px}
+.screen{
+position:fixed;inset:0;
+display:flex;flex-direction:column;
+justify-content:center;align-items:center;
+background:rgba(0,0,0,.65);
+color:white;z-index:10}
+button{padding:12px 24px;margin:6px;font-size:16px;border-radius:10px;border:none}
+.card{background:white;color:black;padding:12px;border-radius:12px;margin:6px;width:240px}
+#hud{position:fixed;top:10px;left:10px;font-size:18px;color:white}
+#leaderboard{margin-top:10px;background:#111;padding:10px;border-radius:10px}
 </style>
 </head>
 <body>
 
-<canvas id="game"></canvas>
-
-<div id="menu" class="overlay">
-<h1>🐼 Flappy Panda</h1>
-<button onclick="startGame()">▶ Start</button>
-<button onclick="openShop()">🛒 Shop</button>
-<div id="leaderboard"><h3>🏆 Wereldwijde Highscores</h3><ol id="scores"></ol></div>
+<div id="menu" class="screen">
+<h1>Flappy Panda 🐼</h1>
+<p>Coins: <span id="coins">0</span></p>
+<button onclick="startGame()">Start</button>
+<button onclick="openShop()">Shop</button>
+<div id="leaderboard">
+<h3>🌍 Global Highscores</h3>
+<ol id="scores"></ol>
+</div>
 </div>
 
-<div id="shop" class="overlay">
+<div id="shop" class="screen" style="display:none">
 <h2>🛒 Shop</h2>
-<div id="shopContent"></div>
-<button onclick="closeShop()">⬅ Terug</button>
+<div id="shopList"></div>
+<button onclick="backToMenu()">Back</button>
 </div>
 
-<div id="gameover" class="overlay" style="display:none">
-<h2>💀 Game Over</h2>
-<button onclick="restart()">🔁 Opnieuw</button>
-<button onclick="backToMenu()">🏠 Menu</button>
+<div id="gameover" class="screen" style="display:none">
+<h2>Game Over</h2>
+<p>Score: <span id="finalScore">0</span></p>
+<button onclick="startGame()">Restart</button>
+<button onclick="backToMenu()">Menu</button>
 </div>
 
-<audio id="music" src="background.mp3" loop></audio>
+<div id="hud">Score: <span id="score">0</span></div>
+<canvas id="game"></canvas>
 
 <script>
 const canvas=document.getElementById("game"),ctx=canvas.getContext("2d");
-canvas.width=innerWidth;canvas.height=innerHeight;
+function resize(){canvas.width=innerWidth;canvas.height=innerHeight}
+window.addEventListener("resize",resize);resize();
 
-let playing=false,score=0;
-let coins=Number(localStorage.getItem("coins")||0);
-let bird=localStorage.getItem("activeSkin")||"🐼";
-let owned=JSON.parse(localStorage.getItem("ownedSkins")||'["🐼"]');
-
-const skins=[
-{emoji:"🐼",price:0},{emoji:"🐵",price:10},{emoji:"🐸",price:20},
-{emoji:"🐧",price:30},{emoji:"🐱",price:40},{emoji:"🦊",price:50},
-{emoji:"🐶",price:60},{emoji:"🐯",price:70},{emoji:"🐰",price:80},{emoji:"😹",price:100}
+const SKINS=[
+{emoji:"🐼",cost:0},{emoji:"🐵",cost:10},{emoji:"🐸",cost:15},
+{emoji:"🐧",cost:20},{emoji:"🐱",cost:25},{emoji:"🦊",cost:30}
 ];
 
-document.body.addEventListener("touchstart",()=>document.getElementById("music").play(),{once:true});
+let coins=Number(localStorage.getItem("coins")||0);
+let owned=JSON.parse(localStorage.getItem("ownedSkins")||'["🐼"]');
+let skin=localStorage.getItem("skin")||"🐼";
+document.getElementById("coins").textContent=coins;
 
-function startGame(){document.getElementById("menu").style.display="none";resetGame();playing=true}
-function restart(){document.getElementById("gameover").style.display="none";resetGame();playing=true}
-function backToMenu(){document.getElementById("gameover").style.display="none";document.getElementById("menu").style.display="flex";updateLeaderboard()}
+let state="menu",bird,pipes,score,gravity=0.6,timer=0;
 
-function openShop(){
-document.getElementById("shop").style.display="flex";
-const c=document.getElementById("shopContent");
-c.innerHTML=`<h3>💰 Coins: ${coins}</h3>`;
-skins.forEach(s=>{
-const d=document.createElement("div");d.className="skin";
-d.innerHTML=`<span>${s.emoji} - ${s.price}💰</span>`;
+function startGame(){
+hideAll();state="game";
+bird={x:canvas.width*.25,y:canvas.height/2,v:0};
+pipes=[];score=0;timer=0;
+document.getElementById("score").textContent=0;
+}
+function openShop(){hideAll();shop.style.display="flex";renderShop()}
+function backToMenu(){hideAll();menu.style.display="flex";loadScores()}
+function hideAll(){menu.style.display=shop.style.display=gameover.style.display="none"}
+
+function gameOver(){
+state="gameover";coins+=score;
+localStorage.setItem("coins",coins);
+document.getElementById("coins").textContent=coins;
+document.getElementById("finalScore").textContent=score;
+gameover.style.display="flex";
+saveScore(score);
+}
+
+function renderShop(){
+const list=document.getElementById("shopList");list.innerHTML="";
+SKINS.forEach(s=>{
+const ownedSkin=owned.includes(s.emoji);
+const c=document.createElement("div");c.className="card";
+c.innerHTML=`${s.emoji}<br>${ownedSkin?"Owned":s.cost+" coins"}`;
 const b=document.createElement("button");
-if(owned.includes(s.emoji)){
-b.textContent="Equip";b.onclick=()=>{bird=s.emoji;localStorage.setItem("activeSkin",bird)}
-}else{
-b.textContent="Koop";b.disabled=coins<s.price;
-b.onclick=()=>{coins-=s.price;owned.push(s.emoji);
+b.textContent=ownedSkin?"Equip":"Buy";
+b.onclick=()=>{
+if(!ownedSkin){
+if(coins<s.cost)return alert("Not enough coins");
+coins-=s.cost;owned.push(s.emoji);
 localStorage.setItem("coins",coins);
 localStorage.setItem("ownedSkins",JSON.stringify(owned));
-openShop()}
 }
-d.appendChild(b);c.appendChild(d);
+skin=s.emoji;localStorage.setItem("skin",skin);
+renderShop();
+};
+c.appendChild(b);list.appendChild(c);
 });
 }
-function closeShop(){document.getElementById("shop").style.display="none"}
-
-/* FLAPPY GAME */
-let y,vel,pipes,frame;
-const gravity=0.6,jump=-10;
-
-function resetGame(){y=canvas.height/2;vel=0;pipes=[];frame=0;score=0}
-
-function flap(){if(playing)vel=jump}
-document.body.addEventListener("touchstart",flap);
-document.body.addEventListener("mousedown",flap);
-document.body.addEventListener("keydown",e=>e.code==="Space"&&flap());
 
 function spawnPipe(){
-const gap=180;
+const gap=canvas.height*0.3;
 const top=Math.random()*(canvas.height-gap-100)+50;
 pipes.push({x:canvas.width,top,bottom:top+gap,passed:false});
 }
 
-function gameOver(){
-playing=false;
-coins+=score;
-localStorage.setItem("coins",coins);
-document.getElementById("gameover").style.display="flex";
-saveScore(score);updateLeaderboard();
+function update(){
+if(state!=="game")return;
+bird.v+=gravity;bird.y+=bird.v;
+if(bird.y<0||bird.y>canvas.height)gameOver();
+timer++;if(timer>90){spawnPipe();timer=0}
+pipes.forEach(p=>{
+p.x-=4;
+if(!p.passed&&p.x<bird.x){p.passed=true;score++;document.getElementById("score").textContent=score}
+if(bird.x>p.x&&bird.x<p.x+60&&(bird.y<p.top||bird.y>p.bottom))gameOver();
+});
+pipes=pipes.filter(p=>p.x>-80);
 }
 
-function loop(){
+function draw(){
 ctx.clearRect(0,0,canvas.width,canvas.height);
-if(playing){
-vel+=gravity;y+=vel;frame++;
-if(frame%120===0)spawnPipe();
-ctx.font="42px serif";ctx.fillText(bird,80,y);
+if(state!=="game")return;
+ctx.font="32px serif";ctx.fillText(skin,bird.x-16,bird.y);
+ctx.fillStyle="#2ecc71";
 pipes.forEach(p=>{
-p.x-=3;
 ctx.fillRect(p.x,0,60,p.top);
 ctx.fillRect(p.x,p.bottom,60,canvas.height);
-if(!p.passed&&p.x<80){p.passed=true;score++}
-if(80<p.x+60&&120>p.x&&(y<p.top||y>p.bottom))gameOver();
 });
-if(y<0||y>canvas.height)gameOver();
-ctx.fillText("Score: "+score,20,50);
 }
-requestAnimationFrame(loop);
-}
-loop();
+
+function loop(){update();draw();requestAnimationFrame(loop)}loop();
+function flap(){if(state==="game")bird.v=-10}
+addEventListener("pointerdown",e=>{e.preventDefault();flap()},{passive:false});
+addEventListener("keydown",e=>e.code==="Space"&&flap());
 </script>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
-import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-analytics.js";
-import { getFirestore,collection,addDoc,query,orderBy,limit,getDocs }
+import { getFirestore,collection,addDoc,getDocs,query,orderBy,limit }
 from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
 
 const firebaseConfig={
@@ -146,30 +159,24 @@ measurementId:"G-2M3S70YDL6"
 };
 
 const app=initializeApp(firebaseConfig);
-getAnalytics(app);
 const db=getFirestore(app);
 
 window.saveScore=async(score)=>{
-if(score<=0)return;
-await addDoc(collection(db,"scores"),{score,time:Date.now()});
+if(score>0)await addDoc(collection(db,"scores"),{score,time:Date.now()});
 };
 
-window.updateLeaderboard=async()=>{
-const list=document.getElementById("scores");
-if(!list)return;
-list.innerHTML="Laden...";
+window.loadScores=async()=>{
+const list=document.getElementById("scores");list.innerHTML="";
 const q=query(collection(db,"scores"),orderBy("score","desc"),limit(10));
 const snap=await getDocs(q);
-list.innerHTML="";
 snap.forEach(d=>{
 const li=document.createElement("li");
 li.textContent=d.data().score;
 list.appendChild(li);
 });
 };
-updateLeaderboard();
+loadScores();
 </script>
 
 </body>
 </html>
-
