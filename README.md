@@ -1,6 +1,6 @@
 # 🐼 Flappy Panda
 
-Flappy Panda is a fun, mobile-friendly Flappy Bird–style game with:
+Flappy Panda is a fun, mobile-friendly Flabby Byrd–style game with:
 - A panda emoji 🐼 as the main character  
 - Skins & power-ups  
 - A shop system  
