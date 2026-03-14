@@ -1,70 +1,104 @@
 # 🐼 Flappy Panda
 
-Flappy Panda is a fun, mobile-friendly Flabby Byrd–style game with:
-- A panda emoji 🐼 as the main character  
-- Skins & power-ups  
-- A shop system  
-- Background music  
-- A global highscore leaderboard (Firebase)  
+> A fun Flappy Bird–style browser game featuring a panda, skins, power-ups, and a global leaderboard!
 
-The game is designed to work perfectly on **mobile and desktop** and is hosted via **GitHub Pages**.
+[![Play Now](https://img.shields.io/badge/🎮%20Play%20Now-Live%20Demo-brightgreen?style=for-the-badge)](https://ravi858123.github.io/Flappy-Panda/)
+[![GitHub Pages](https://img.shields.io/badge/Hosted%20on-GitHub%20Pages-blue?style=for-the-badge&logo=github)](https://ravi858123.github.io/Flappy-Panda/)
+[![License](https://img.shields.io/badge/License-Non--Commercial-red?style=for-the-badge)](https://github.com/ravi858123/Flappy-Panda#-license--usage-rules)
+[![HTML](https://img.shields.io/badge/Built%20with-HTML-orange?style=for-the-badge&logo=html5)](https://github.com/ravi858123/Flappy-Panda)
+
+---
+
+## 🌐 Live Demo
+
+🎮 **[Play Flappy Panda here!](https://ravi858123.github.io/Flappy-Panda/)**
+
+---
+
+## 📖 About
+
+Flappy Panda is a mobile-friendly browser game inspired by Flappy Bird. Guide your panda through the pipes, collect points, unlock skins, and compete on the global leaderboard!
+
+**Features:**
+- 🐼 Panda emoji as the main character
+- 🎨 Unlockable skins & power-ups
+- 🛒 In-game shop system
+- 🎵 Background music
+- 🏆 Global highscore leaderboard (powered by Firebase)
+- 📱 Works on both **mobile** and **desktop**
 
 ---
 
 ## 🎮 How to Play
-- Tap / click to make the panda fly
-- Avoid the pipes
-- Collect points
-- Buy skins and power-ups in the shop
-- Try to reach the highest score on the leaderboard
+
+1. **Tap or click** to make the panda fly
+2. **Avoid the pipes** — don't hit them!
+3. **Collect points** as you progress
+4. **Buy skins and power-ups** in the shop
+5. **Beat the leaderboard** and claim the top spot 🏆
 
 ---
 
 ## 🛒 Skins & Power-Ups
-- Skins can be bought with in-game points
-- Once purchased, skins are **permanently unlocked**
-- Power-ups appear during gameplay and are shown as emojis
+
+| Feature | Details |
+|---|---|
+| 🎨 Skins | Bought with in-game points |
+| 🔓 Unlock system | Once purchased, skins are **permanently unlocked** |
+| ⚡ Power-ups | Appear during gameplay, shown as emojis |
 
 ---
 
 ## 🏆 Leaderboard
-- Highscores are stored using **Firebase**
-- Scores are shared globally between all players
+
+- Highscores are stored using **Firebase Realtime Database**
+- Scores are **shared globally** between all players
+- Can you reach #1? 🥇
+
+---
+
+## 🚀 Deployment
+
+This project runs entirely as a single `index.html` file and is deployed via **GitHub Pages**.
+
+To host your own version:
+
+1. Fork this repository
+2. Upload `index.html` to the repository root
+3. Go to **Settings → Pages** and enable GitHub Pages
+4. Your game will be live at `https://<your-username>.github.io/<repo-name>/`
 
 ---
 
 ## 🔧 Customization
-You are allowed to:
-- Play the game freely
-- Modify / tweak the code
-- Add new skins, power-ups, or features
-- Use it for learning or personal projects
+
+You are free to:
+
+- ✅ Play the game freely
+- ✅ Modify or tweak the code
+- ✅ Add new skins, power-ups, or features
+- ✅ Use it for learning or personal projects
 
 ---
 
-## 🚫 License / Usage Rules
+## 🚫 License & Usage Rules
+
 **You are NOT allowed to:**
-- Use this game or its code for **commercial purposes**
-- Sell the game or parts of it
-- Re-upload it as your own work
+
+- ❌ Use this game or its code for **commercial purposes**
+- ❌ Sell the game or any part of it
+- ❌ Re-upload it as your own work
 
 This project is **non-commercial only**.
 
 ---
 
-## 👤 Ownership
-This game and concept were created by **the original author (Ravi858123)**.  
-All rights remain with the creator.
+## 👤 Credits
 
-If you modify the project, you must keep this credit intact.
+Created by **[Ravi858123](https://github.com/ravi858123)** — all rights reserved.
 
----
-
-## 🌐 Deployment
-This project is intended to be deployed using **GitHub Pages**.
-
-Just upload `index.html` to your repository root and enable Pages in the repository settings.
+If you fork or modify this project, you must **keep this credit intact**.
 
 ---
 
-Have fun playing Flappy Panda 🐼🎉
+Have fun playing Flappy Panda! 🐼🎉
