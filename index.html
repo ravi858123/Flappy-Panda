@@ -2,39 +2,63 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Flappy Panda </title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flappy Panda Ultimate</title>
+
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:Arial;background:#87CEEB;overflow:hidden}
 canvas{display:block}
+
 .screen{
 position:fixed;inset:0;
 display:flex;flex-direction:column;
 justify-content:center;align-items:center;
 background:rgba(0,0,0,.65);
 color:white;z-index:10}
-button{padding:12px 24px;margin:6px;font-size:16px;border-radius:10px;border:none}
-.card{background:white;color:black;padding:12px;border-radius:12px;margin:6px;width:240px}
-#hud{position:fixed;top:10px;left:10px;font-size:18px;color:white}
+
+button{
+padding:12px 24px;margin:6px;
+border:none;border-radius:10px;font-size:16px
+}
+
+.card{
+background:white;color:black;
+padding:10px;margin:6px;border-radius:10px;width:200px
+}
+
+#hud{position:fixed;top:10px;left:10px;color:white}
 #leaderboard{margin-top:10px;background:#111;padding:10px;border-radius:10px}
+
+#betaBtn{
+position:fixed;top:10px;right:10px;
+z-index:20;background:#444;color:white
+}
+#betaBtn.active{
+background:#ffcc00;color:black;
+box-shadow:0 0 10px #ffcc00
+}
 </style>
 </head>
+
 <body>
+
+<button id="betaBtn">Beta OFF</button>
 
 <div id="menu" class="screen">
 <h1>Flappy Panda 🐼</h1>
 <p>Coins: <span id="coins">0</span></p>
 <button onclick="startGame()">Start</button>
 <button onclick="openShop()">Shop</button>
+
 <div id="leaderboard">
-<h3>Wereldwijde Highscores</h3>
+<h3>Leaderboard</h3>
 <ol id="scores"></ol>
 </div>
 </div>
 
 <div id="shop" class="screen" style="display:none">
-<h2>🛒 Shop</h2>
+<h2>Shop</h2>
 <div id="shopList"></div>
 <button onclick="backToMenu()">Back</button>
 </div>
@@ -50,132 +74,286 @@ button{padding:12px 24px;margin:6px;font-size:16px;border-radius:10px;border:non
 <canvas id="game"></canvas>
 
 <script>
-const canvas=document.getElementById("game"),ctx=canvas.getContext("2d");
+// canvas
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
 function resize(){canvas.width=innerWidth;canvas.height=innerHeight}
-window.addEventListener("resize",resize);resize();
+resize();window.addEventListener("resize",resize);
 
-const SKINS=[
-{emoji:"🐼",cost:0},{emoji:"🐵",cost:10},{emoji:"🐸",cost:15},
-{emoji:"🐧",cost:20},{emoji:"🐱",cost:25},{emoji:"🦊",cost:30},{emoji:"🐶",cost:40},{emoji:"🐦",cost:50},{emoji:"😹",cost:100},{emoji:"❤️",cost:1000},{emoji:"🐱‍🚀",cost:10000},{emoji:"🐱‍💻",cost:123456789},
-];
-];
+// state
+let state="menu",bird,pipes,score,timer=0;
+let gravity=0.6;
 
+// beta
+let betaMode=localStorage.getItem("beta")==="true";
+const betaBtn=document.getElementById("betaBtn");
+
+function updateBetaUI(){
+betaBtn.textContent="Beta "+(betaMode?"ON 🚀":"OFF");
+betaBtn.classList.toggle("active",betaMode);
+}
+updateBetaUI();
+
+betaBtn.onclick=()=>{
+if(state!=="menu")return;
+betaMode=!betaMode;
+localStorage.setItem("beta",betaMode);
+updateBetaUI();
+};
+
+// coins
 let coins=Number(localStorage.getItem("coins")||0);
-let owned=JSON.parse(localStorage.getItem("ownedSkins")||'["🐼"]');
+const coinsEl=document.getElementById("coins");
+coinsEl.textContent=coins;
+
+// skins
+const SKINS=[{emoji:"🐼",cost:0},{emoji:"🐱",cost:20},{emoji:"🐵",cost:30}];
+let owned=JSON.parse(localStorage.getItem("owned")||'["🐼"]');
 let skin=localStorage.getItem("skin")||"🐼";
-document.getElementById("coins").textContent=coins;
 
-let state="menu",bird,pipes,score,gravity=0.6,timer=0;
+// beta systems
+let enemies=[],bullets=[],godMode=false;
 
+// menu
+function hideAll(){menu.style.display=shop.style.display=gameover.style.display="none"}
+function backToMenu(){hideAll();menu.style.display="flex";loadScores()}
+
+// game
 function startGame(){
 hideAll();state="game";
-bird={x:canvas.width*.25,y:canvas.height/2,v:0};
-pipes=[];score=0;timer=0;
+bird={x:200,y:300,v:0};
+pipes=[];enemies=[];bullets=[];
+score=0;timer=0;
 document.getElementById("score").textContent=0;
 }
-function openShop(){hideAll();shop.style.display="flex";renderShop()}
-function backToMenu(){hideAll();menu.style.display="flex";loadScores()}
-function hideAll(){menu.style.display=shop.style.display=gameover.style.display="none"}
 
 function gameOver(){
-state="gameover";coins+=score;
+if(betaMode&&godMode)return;
+state="gameover";
+coins+=score;
 localStorage.setItem("coins",coins);
-document.getElementById("coins").textContent=coins;
+coinsEl.textContent=coins;
 document.getElementById("finalScore").textContent=score;
 gameover.style.display="flex";
 saveScore(score);
 }
 
-function renderShop(){
-const list=document.getElementById("shopList");list.innerHTML="";
-SKINS.forEach(s=>{
-const ownedSkin=owned.includes(s.emoji);
-const c=document.createElement("div");c.className="card";
-c.innerHTML=`${s.emoji}<br>${ownedSkin?"Owned":s.cost+" coins"}`;
-const b=document.createElement("button");
-b.textContent=ownedSkin?"Equip":"Buy";
-b.onclick=()=>{
-if(!ownedSkin){
-if(coins<s.cost)return alert("Not enough coins");
-coins-=s.cost;owned.push(s.emoji);
-localStorage.setItem("coins",coins);
-localStorage.setItem("ownedSkins",JSON.stringify(owned));
-}
-skin=s.emoji;localStorage.setItem("skin",skin);
-renderShop();
-};
-c.appendChild(b);list.appendChild(c);
-});
-}
-
+// pipes
 function spawnPipe(){
-const gap=canvas.height*0.3;
-const top=Math.random()*(canvas.height-gap-100)+50;
+let gap=200;
+let top=Math.random()*(canvas.height-gap);
 pipes.push({x:canvas.width,top,bottom:top+gap,passed:false});
 }
 
+// enemies
+function spawnEnemy(){
+enemies.push({x:canvas.width,y:Math.random()*canvas.height,speed:2});
+}
+
+// shoot
+function shoot(){
+if(!betaMode)return;
+bullets.push({x:bird.x,y:bird.y,speed:8});
+}
+
+// update
 function update(){
 if(state!=="game")return;
-bird.v+=gravity;bird.y+=bird.v;
+
+bird.v+=gravity;
+bird.y+=bird.v;
+
 if(bird.y<0||bird.y>canvas.height)gameOver();
-timer++;if(timer>90){spawnPipe();timer=0}
+
+timer++;
+if(timer>90){spawnPipe();timer=0}
+
+// pipes
 pipes.forEach(p=>{
 p.x-=4;
 if(!p.passed&&p.x<bird.x){p.passed=true;score++;document.getElementById("score").textContent=score}
 if(bird.x>p.x&&bird.x<p.x+60&&(bird.y<p.top||bird.y>p.bottom))gameOver();
 });
-pipes=pipes.filter(p=>p.x>-80);
+pipes=pipes.filter(p=>p.x>-60);
+
+// beta
+if(betaMode){
+
+if(Math.random()<0.02)spawnEnemy();
+
+enemies.forEach(e=>{
+if(e.y<bird.y)e.y+=e.speed;
+else e.y-=e.speed;
+e.x-=3;
+
+let dx=bird.x-e.x,dy=bird.y-e.y;
+if(Math.sqrt(dx*dx+dy*dy)<25)gameOver();
+});
+enemies=enemies.filter(e=>e.x>-50);
+
+// bullets
+bullets.forEach(b=>b.x+=b.speed);
+
+bullets.forEach((b,bi)=>{
+enemies.forEach((e,ei)=>{
+let dx=b.x-e.x,dy=b.y-e.y;
+if(Math.sqrt(dx*dx+dy*dy)<20){
+enemies.splice(ei,1);
+bullets.splice(bi,1);
+coins+=5;
+coinsEl.textContent=coins;
+}
+});
+});
 }
 
+// draw
 function draw(){
 ctx.clearRect(0,0,canvas.width,canvas.height);
 if(state!=="game")return;
-ctx.font="32px serif";ctx.fillText(skin,bird.x-16,bird.y);
-ctx.fillStyle="#2ecc71";
+
+ctx.font="32px serif";
+ctx.fillText(skin,bird.x,bird.y);
+
+ctx.fillStyle="green";
 pipes.forEach(p=>{
 ctx.fillRect(p.x,0,60,p.top);
 ctx.fillRect(p.x,p.bottom,60,canvas.height);
 });
+
+if(betaMode){
+ctx.font="28px serif";
+enemies.forEach(e=>ctx.fillText("👾",e.x,e.y));
+
+ctx.fillStyle="yellow";
+bullets.forEach(b=>{
+ctx.beginPath();
+ctx.arc(b.x,b.y,5,0,Math.PI*2);
+ctx.fill();
+});
+}
 }
 
-function loop(){update();draw();requestAnimationFrame(loop)}loop();
+function loop(){update();draw();requestAnimationFrame(loop)}
+loop();
+
+// input
 function flap(){if(state==="game")bird.v=-10}
-addEventListener("pointerdown",e=>{e.preventDefault();flap()},{passive:false});
-addEventListener("keydown",e=>e.code==="Space"&&flap());
+addEventListener("pointerdown",e=>{flap();shoot()});
+addEventListener("keydown",e=>{if(e.code==="Space"){flap();shoot()}});
+
+// shop
+function openShop(){
+hideAll();shop.style.display="flex";
+const list=document.getElementById("shopList");
+list.innerHTML="";
+SKINS.forEach(s=>{
+const div=document.createElement("div");
+div.className="card";
+div.innerHTML=`${s.emoji}<br>${owned.includes(s.emoji)?"Owned":s.cost+" coins"}`;
+const b=document.createElement("button");
+b.textContent=owned.includes(s.emoji)?"Equip":"Buy";
+b.onclick=()=>{
+if(!owned.includes(s.emoji)){
+if(coins<s.cost)return alert("Not enough coins");
+coins-=s.cost;
+owned.push(s.emoji);
+localStorage.setItem("owned",JSON.stringify(owned));
+localStorage.setItem("coins",coins);
+coinsEl.textContent=coins;
+}
+skin=s.emoji;
+localStorage.setItem("skin",skin);
+openShop();
+};
+div.appendChild(b);
+list.appendChild(div);
+});
+}
+
+// cheats
+let cheat="";
+addEventListener("keydown",e=>{
+if(!betaMode)return;
+if(e.key.length===1){
+cheat+=e.key.toUpperCase();
+if(cheat.endsWith("LOL")){
+coins+=1e9;
+coinsEl.textContent=coins;
+}
+}
+if(e.key==="`") openConsole();
+});
+
+function openConsole(){
+if(!betaMode)return;
+let cmd=prompt("coins 999 | god | reset");
+if(!cmd)return;
+let p=cmd.split(" ");
+if(p[0]==="coins"){
+coins=Number(p[1])||coins;
+coinsEl.textContent=coins;
+localStorage.setItem("coins",coins);
+}
+if(p[0]==="god")godMode=!godMode;
+if(p[0]==="reset"){localStorage.clear();location.reload()}
+}
 </script>
 
+<!-- 🔥 FIREBASE -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
-import { getFirestore,collection,addDoc,getDocs,query,orderBy,limit }
-from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+import {
+getFirestore,collection,addDoc,getDocs,query,orderBy,limit
+} from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
 
-const firebaseConfig={
-apiKey:"AIzaSyC93SD27hG0qta0n3DaDxGzTvNtm9ePWUM",
-authDomain:"flappy-panda-github.firebaseapp.com",
-projectId:"flappy-panda-github",
-storageBucket:"flappy-panda-github.firebasestorage.app",
-messagingSenderId:"685258980565",
-appId:"1:685258980565:web:8dbbed1a10de3de30eb65c",
-measurementId:"G-2M3S70YDL6"
+const firebaseConfig = {
+apiKey: "AIzaSyC93SD27hG0qta0n3DaDxGzTvNtm9ePWUM",
+authDomain: "flappy-panda-github.firebaseapp.com",
+projectId: "flappy-panda-github",
+storageBucket: "flappy-panda-github.firebasestorage.app",
+messagingSenderId: "685258980565",
+appId: "1:685258980565:web:8dbbed1a10de3de30eb65c",
+measurementId: "G-2M3S70YDL6"
 };
 
-const app=initializeApp(firebaseConfig);
-const db=getFirestore(app);
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+function getName(){
+let n=localStorage.getItem("name");
+if(!n){
+n=prompt("Name?");
+if(!n)n="Anon";
+localStorage.setItem("name",n);
+}
+return n;
+}
 
 window.saveScore=async(score)=>{
-if(score>0)await addDoc(collection(db,"scores"),{score,time:Date.now()});
+if(score<=0)return;
+await addDoc(collection(db,"scores"),{
+name:getName(),
+score:score,
+time:Date.now()
+});
 };
 
 window.loadScores=async()=>{
-const list=document.getElementById("scores");list.innerHTML="";
+const list=document.getElementById("scores");
+list.innerHTML="Loading...";
+
 const q=query(collection(db,"scores"),orderBy("score","desc"),limit(10));
 const snap=await getDocs(q);
+
+list.innerHTML="";
 snap.forEach(d=>{
 const li=document.createElement("li");
-li.textContent=d.data().score;
+li.textContent=d.data().name+" - "+d.data().score;
 list.appendChild(li);
 });
 };
+
 loadScores();
 </script>
 
