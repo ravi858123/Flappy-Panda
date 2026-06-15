@@ -18,6 +18,8 @@ button{padding:12px 24px;margin:6px;font-size:16px;border-radius:10px;border:non
 .card{background:white;color:black;padding:12px;border-radius:12px;margin:6px;width:240px}
 #hud{position:fixed;top:10px;left:10px;font-size:18px;color:white}
 #leaderboard{margin-top:10px;background:#111;padding:10px;border-radius:10px}
+#scores li{display:flex;gap:8px;align-items:center;padding:3px 0}
+.score-name{flex:1}
 </style>
 </head>
 <body>
@@ -42,6 +44,12 @@ button{padding:12px 24px;margin:6px;font-size:16px;border-radius:10px;border:non
 <div id="gameover" class="screen" style="display:none">
 <h2>Game Over</h2>
 <p>Score: <span id="finalScore">0</span></p>
+<div style="margin:8px 0">
+  <label style="font-size:14px">Jouw naam voor het scorebord:</label><br>
+  <input id="playerName" type="text" maxlength="16" placeholder="Jouw naam..." autocomplete="off"
+    style="margin-top:6px;padding:8px 12px;border-radius:8px;border:none;font-size:14px;text-align:center;width:200px">
+</div>
+<button onclick="submitAndRestart()">💾 Opslaan & Opnieuw spelen</button>
 <button onclick="startGame()">Restart</button>
 <button onclick="backToMenu()">Menu</button>
 </div>
@@ -55,16 +63,18 @@ function resize(){canvas.width=innerWidth;canvas.height=innerHeight}
 window.addEventListener("resize",resize);resize();
 
 const SKINS=[
-{emoji:"🐼",cost:0},{emoji:"🐵",cost:10},{emoji:"🐸",cost:15},
-{emoji:"🐧",cost:20},{emoji:"🐱",cost:25},{emoji:"🦊",cost:30},{emoji:"🐶",cost:40},{emoji:"🐦",cost:50},{emoji:"😹",cost:100}
+{emoji:"🐼",cost:0},{emoji:"🐵",cost:100},{emoji:"🐸",cost:150},
+{emoji:"🐧",cost:200},{emoji:"🐱",cost:250},{emoji:"🦊",cost:300},{emoji:"🐶💩",cost:400},{emoji:"🐦",cost:500},{emoji:"😹",cost:1000}
 ];
 
 let coins=Number(localStorage.getItem("coins")||0);
 let owned=JSON.parse(localStorage.getItem("ownedSkins")||'["🐼"]');
 let skin=localStorage.getItem("skin")||"🐼";
+let savedName=localStorage.getItem("playerName")||"";
 document.getElementById("coins").textContent=coins;
 
 let state="menu",bird,pipes,score,gravity=0.6,timer=0;
+let currentScore=0;
 
 function startGame(){
 hideAll();state="game";
@@ -77,12 +87,23 @@ function backToMenu(){hideAll();menu.style.display="flex";loadScores()}
 function hideAll(){menu.style.display=shop.style.display=gameover.style.display="none"}
 
 function gameOver(){
-state="gameover";coins+=score;
+state="gameover";
+currentScore=score;
+coins+=score;
 localStorage.setItem("coins",coins);
 document.getElementById("coins").textContent=coins;
 document.getElementById("finalScore").textContent=score;
+document.getElementById("playerName").value=savedName;
 gameover.style.display="flex";
-saveScore(score);
+}
+
+async function submitAndRestart(){
+const input=document.getElementById("playerName");
+const name=(input.value.trim()||"Anoniem").substring(0,16);
+savedName=name;
+localStorage.setItem("playerName",name);
+if(currentScore>0) await saveScore(currentScore,name);
+startGame();
 }
 
 function renderShop(){
@@ -161,8 +182,8 @@ measurementId:"G-2M3S70YDL6"
 const app=initializeApp(firebaseConfig);
 const db=getFirestore(app);
 
-window.saveScore=async(score)=>{
-if(score>0)await addDoc(collection(db,"scores"),{score,time:Date.now()});
+window.saveScore=async(score,name)=>{
+if(score>0)await addDoc(collection(db,"scores"),{score,name:name||"Anoniem",time:Date.now()});
 };
 
 window.loadScores=async()=>{
@@ -171,7 +192,8 @@ const q=query(collection(db,"scores"),orderBy("score","desc"),limit(10));
 const snap=await getDocs(q);
 snap.forEach(d=>{
 const li=document.createElement("li");
-li.textContent=d.data().score;
+const {score,name}=d.data();
+li.innerHTML=`<span class="score-name">${name||"Anoniem"}</span><span>${score}</span>`;
 list.appendChild(li);
 });
 };
